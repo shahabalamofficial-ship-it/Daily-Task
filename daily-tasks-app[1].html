@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>Daily Tasks</title>
+
+<!-- iPhone: makes it open full-screen like a real app, and lets it work offline -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Tasks">
+<meta name="theme-color" content="#FBF7EE">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23FBF7EE'/%3E%3Cpath d='M25 52 L42 68 L75 30' stroke='%233B6FE0' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<style>
+  :root{
+    --paper:#FBF7EE; --paper-2:#F5EFE1; --ink:#2B2A28; --ink-soft:#5B564C;
+    --rule-blue:#B9CEE0; --margin-red:#E3A6A0;
+    --blue:#3B6FE0; --blue-soft:#DCE8FF;
+    --red:#D64545; --red-soft:#FCE4E4;
+    --green:#3E7C7C;
+    --font-hand: Snell Roundhand, 'Segoe Script', cursive;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SF Mono', Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body);}
+  #app{max-width:480px; margin:0 auto; min-height:100vh; padding-bottom:40px;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:2px solid var(--ink); padding:16px; padding-top:max(16px, env(safe-area-inset-top));}
+  header h1{font-family:var(--font-hand); font-size:32px; margin:0; font-weight:700;}
+  header .sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+
+  .stats{display:flex; gap:10px; margin-top:12px;}
+  .stat{flex:1; text-align:center; padding:8px; border:2px solid var(--ink); border-radius:10px; background:var(--paper-2);}
+  .stat b{display:block; font-size:20px; font-family:var(--font-mono);}
+  .stat span{font-size:11px; color:var(--ink-soft);}
+
+  .add-row{display:flex; gap:8px; padding:14px 16px 6px;}
+  .add-row input{flex:1; padding:12px; border:2px solid var(--ink); border-radius:10px; font-size:15px; background:#fff;}
+  .add-row button{padding:0 18px; border:2px solid var(--ink); border-radius:10px; background:var(--blue); color:#fff; font-weight:700; font-size:20px; cursor:pointer;}
+  .add-row button:active{transform:translateY(1px);}
+
+  .filters{display:flex; gap:6px; padding:10px 16px;}
+  .filter{flex:1; text-align:center; padding:7px; border:2px solid var(--ink); border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer; background:var(--paper);}
+  .filter.active{background:var(--ink); color:#fff;}
+
+  main{padding:6px 16px;}
+
+  .task{
+    display:flex; align-items:flex-start; gap:12px; padding:13px 12px; margin-bottom:10px;
+    border:2px solid var(--ink); border-radius:12px; background:var(--paper);
+    box-shadow:3px 3px 0 rgba(43,42,40,.06); position:relative;
+  }
+  .task.done{opacity:.65;}
+  .tick{
+    width:26px; height:26px; border-radius:8px; border:2.5px solid var(--ink); flex-shrink:0; margin-top:2px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; background:#fff;
+  }
+  .tick.on{background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700;}
+  .task-text{flex:1; font-size:15px; line-height:1.4; padding-top:2px;}
+  .task.done .task-text{text-decoration:line-through; color:var(--ink-soft);}
+  .task-meta{display:flex; align-items:center; gap:6px; margin-top:4px;}
+  .reminder-dot{
+    display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--red);
+    background:var(--red-soft); padding:2px 8px; border-radius:10px; font-weight:600;
+  }
+  .del-btn{
+    background:none; border:none; color:var(--ink-soft); font-size:18px; cursor:pointer; flex-shrink:0; padding:0 2px;
+  }
+
+  .offline-badge{
+    display:none; align-items:center; gap:6px; font-size:11.5px; color:#fff; background:var(--red);
+    padding:6px 12px; text-align:center; justify-content:center;
+  }
+  .offline-badge.show{display:flex;}
+
+  .empty{text-align:center; padding:50px 20px; color:var(--ink-soft);}
+  .empty .big{font-size:38px; margin-bottom:10px;}
+
+  ::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="offline-badge" id="offlineBadge">📴 Offline — but your tasks still work!</div>
+  <header>
+    <h1>✅ Daily Tasks</h1>
+    <div class="sub">Blue tick = done. Red badge = still pending.</div>
+    <div class="stats">
+      <div class="stat"><b id="totalCount">0</b><span>Total</span></div>
+      <div class="stat"><b id="doneCount">0</b><span>Done</span></div>
+      <div class="stat"><b id="pendingCount">0</b><span>Pending</span></div>
+    </div>
+  </header>
+
+  <div class="add-row">
+    <input id="taskInput" placeholder="Add a new task...">
+    <button id="addBtn">+</button>
+  </div>
+
+  <div class="filters" id="filters">
+    <div class="filter active" data-f="all">All</div>
+    <div class="filter" data-f="active">Pending</div>
+    <div class="filter" data-f="done">Done</div>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<script>
+(function(){
+if (!window.storage) {
+  window.storage = {
+    async get(key, shared){ const v=localStorage.getItem('todo_'+key); if(v===null) throw new Error('nf'); return {key,value:v,shared:!!shared}; },
+    async set(key, value, shared){ localStorage.setItem('todo_'+key, value); return {key,value,shared:!!shared}; }
+  };
+}
+
+let tasks = [];
+let filter = 'all';
+
+async function load(){
+  try{
+    const r = await window.storage.get('tasks', false);
+    tasks = r && r.value ? JSON.parse(r.value) : [];
+  }catch(e){ tasks = []; }
+}
+async function save(){
+  try{ await window.storage.set('tasks', JSON.stringify(tasks), false); }catch(e){}
+}
+
+function timeAgo(ts){
+  const mins = Math.floor((Date.now()-ts)/60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins+'m ago';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs+'h ago';
+  return Math.floor(hrs/24)+'d ago';
+}
+
+function render(){
+  const total = tasks.length;
+  const done = tasks.filter(t=>t.done).length;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('doneCount').textContent = done;
+  document.getElementById('pendingCount').textContent = total-done;
+
+  let list = tasks;
+  if(filter==='active') list = tasks.filter(t=>!t.done);
+  if(filter==='done') list = tasks.filter(t=>t.done);
+
+  const $main = document.getElementById('main');
+  if(list.length===0){
+    $main.innerHTML = `<div class="empty"><div class="big">📝</div>No tasks here yet</div>`;
+    return;
+  }
+
+  $main.innerHTML = list.map(t=>{
+    const overdueHrs = Math.floor((Date.now()-t.created)/3600000);
+    const showReminder = !t.done && overdueHrs >= 1;
+    return `
+    <div class="task ${t.done?'done':''}" data-id="${t.id}">
+      <div class="tick ${t.done?'on':''}" data-tick="${t.id}">${t.done?'✓':''}</div>
+      <div style="flex:1">
+        <div class="task-text">${t.text}</div>
+        <div class="task-meta">
+          ${showReminder ? `<span class="reminder-dot">🔴 still pending — ${timeAgo(t.created)}</span>` : `<span style="font-size:10.5px;color:var(--ink-soft)">${timeAgo(t.created)}</span>`}
+        </div>
+      </div>
+      <button class="del-btn" data-del="${t.id}">✕</button>
+    </div>`;
+  }).join('');
+
+  $main.querySelectorAll('[data-tick]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.tick;
+      const t = tasks.find(x=>x.id===id);
+      t.done = !t.done;
+      await save();
+      render();
+    };
+  });
+  $main.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.del;
+      tasks = tasks.filter(x=>x.id!==id);
+      await save();
+      render();
+    };
+  });
+}
+
+document.getElementById('addBtn').onclick = addTask;
+document.getElementById('taskInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask(); });
+async function addTask(){
+  const input = document.getElementById('taskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  tasks.unshift({ id: 'x'+Date.now(), text, done:false, created: Date.now() });
+  input.value='';
+  await save();
+  render();
+}
+
+document.getElementById('filters').addEventListener('click', e=>{
+  const el = e.target.closest('.filter');
+  if(!el) return;
+  document.querySelectorAll('.filter').forEach(f=>f.classList.remove('active'));
+  el.classList.add('active');
+  filter = el.dataset.f;
+  render();
+});
+
+async function init(){ await load(); render(); }
+init();
+
+// ---------- Offline support ----------
+function updateOfflineBadge(){
+  document.getElementById('offlineBadge').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOfflineBadge);
+window.addEventListener('offline', updateOfflineBadge);
+updateOfflineBadge();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* fine if sw.js isn't uploaded yet */ });
+  });
+}
+})();
+</script>
+</body>
+</html>
